@@ -1,109 +1,31 @@
 const validator = require('../validations/validator')
-const linkAws = require('../aws/aws')
+const aws = require('../aws/aws')
 const userModel = require('../models/userModel')
+const bcrypt = require('bcryptjs')
 
 
-const userCreate = async function (req, res) {
+const createUser = async function (req, res) {
     try {
         let data = req.body
         let files = req.files
+        let { fname, lname, email, password, phone, address } = data
 
-        if (!validator.isValidDetails(data)) {
-            return res.status(400).send({ status: false, msg: "please provide user data" })
-        }
+        const salt = await bcrypt.genSalt(10);
+        password = await bcrypt.hash(password, salt)
 
-        const { fname, lname, email, password, phone, address, profileImage } = data
+        let profileImage = await aws.uploadFile(files[0])
 
-        if (!validator.isValidValue(fname)) {
-            return res.status(400).send({ status: false, messege: "please provide name" })
-        }
-        if (!validator.isValidValue(lname)) {
-            return res.status(400).send({ status: false, messege: "please provide lname" })
-        }
-
-        if (!validator.isValidValue(email)) {
-            return res.status(400).send({ status: false, messege: "please provide email" })
-        }
-
-        if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-            return res.status(400).send({ status: false, msg: "Please provide valid Email Address" });
-        }
-
-        let isDuplicateEmail = await userModel.findOne({ email })
-        if (isDuplicateEmail) {
-            return res.status(401).send({ status: false, msg: "email already exists" })
-        }
-        let uploadedFileURL = await linkAws.uploadFile(files[0])
-
-        if (!validator.isValidValue(password)) {
-            return res.status(400).send({ status: false, messege: "please provide password" })
-        }
-
-        const encryptedPassword = await bcrypt.hash(password, 4)
-
-        if (password.length < 8 || password.length > 15) {
-            return res.status(400).send({ status: false, message: "Password must be of 8-15 letters." })
-        }
-
-        if (!validator.isValidValue(phone)) {
-            return res.status(400).send({ status: false, messege: "please provide password" })
-        }
-
-        let isValidPhone = (/^(\+91[\-\s]?)?[0]?(91)?[6789]\d{9}$/.test(phone))
-        if (!isValidPhone) {
-            return res.status(400).send({ status: false, msg: "please provide valid phone" })
-        }
-
-        let isDuplicatePhone = await userModel.findOne({ phone })
-        if (isDuplicatePhone) {
-            return res.status(401).send({ status: false, msg: "phone no. already exists" })
-        }
-
-        if (address){
-            if(address.shipping){
-                if(!validator.isValidValue(address.shipping.street)){
-                    return res.status(400).send({ status: false, messege: "please provide street." })
-                }
-                else if (!validator.isValidValue(address.shipping.city)){
-                        return res.status(400).send({ status: false, messege: "please provide city." })
-                    }
-                    else if (!validator.isValidValue(address.shipping.pincode)){
-                        return res.status(400).send({ status: false, messege: "please provide pincode." })
-                    }    
-            }
-            if(address.billing){
-                if(!validator.isValidValue(address.shipping.street)){
-                    return res.status(400).send({ status: false, messege: "please provide street." })
-                }
-                else if (!validator.isValidValue(address.shipping.city)){
-                        return res.status(400).send({ status: false, messege: "please provide city." })
-                    }
-                    else if (!validator.isValidValue(address.shipping.pincode)){
-                        return res.status(400).send({ status: false, messege: "please provide pincode." })
-                    }    
-            }
-        }
-
-        const finalDetails = {
-            fname,
-            lname, 
-            email, 
-            password : encryptedPassword, 
-            phone, 
-            address, 
-            profileImage : uploadedFileURL
-        }
+        const finalDetails = { fname, lname, email, profileImage, password, phone, address }
 
         let savedData = await userModel.create(finalDetails)
-        return res.status(201).send({ status: true, data: savedData });
+        return res.status(201).send({ status: true,msg:"user created successfully", data: savedData });
     }
     catch (error) {
-        console.log(error)
-        return res.status(500).send({ status: false, msg: error.message })
+        return res.status(500).send({ status: false, msg: error })
     }
 }
 
-
+//**********************************  update user  ******************************************************************************************** */
 
 const updateUser = async (req, res) => {
     try {
@@ -204,11 +126,10 @@ const updateUser = async (req, res) => {
         });
     }
     catch (error) {
-        console.error(error);
         return res.status(500).json({ status: false, msg: error.message });
     }
 }
 module.exports = {
-    updateUser,
-    userCreate
+    createUser,
+    updateUser
 }

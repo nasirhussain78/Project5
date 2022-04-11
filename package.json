@@ -19,6 +19,7 @@
   "homepage": "https://github.com/amandbest786/Project---Products-Management#readme",
   "dependencies": {
     "aws-sdk": "^2.1111.0",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "express": "^4.17.3",
     "jsonwebtoken": "^8.5.1",
