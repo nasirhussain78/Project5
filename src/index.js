@@ -1,11 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const route = require('./route');
+const route = require('./route/route');
 const mongoose = require('mongoose');
+const multer = require('multer')
 const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(multer().any())
 app.use('/', route);
 
 mongoose.connect("mongodb://127.0.0.1:27017/group9Database", {useNewUrlParser: true})
