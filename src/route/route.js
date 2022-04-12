@@ -1,11 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const control = require("../controllers/userController")
-const Validation = require('../validations/validator')
+const userController = require("../controllers/userController")
+const productController = require("../controllers/productController")
+const validate = require('../validations/validator')
+const auth = require('../middleware/auth')
 
-//------------------API's------------------
+//------------------API's-----------------------------------------------------------------------------------
 
-router.post('/register', Validation.userValidation, control.createUser)
-router.put('/user/:userId/profile', control.updateUser)
+router.post('/register', validate.user, userController.createUser)
+router.post('/login', validate.login,userController.userLogin)
+router.get('/user/:userId/profile', auth.userAuth, userController.getUserDetail)
+router.put('/user/:userId/profile', auth.userAuth, userController.updateUser)
+
+router.post('/products',validate.product, productController.createProduct)
 
 module.exports = router;
