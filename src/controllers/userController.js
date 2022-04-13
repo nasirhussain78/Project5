@@ -104,6 +104,9 @@ const updateUser = async (req, res) => {
         let files = req.files
         const dataToUpdate = req.body
         
+        if (!validator.isValidObjectId(userIdFromParams)) {
+            return res.status(400).send({ status: false, msg: "userId is invalid" });
+        }
 
         const userByuserId = await userModel.findById(userIdFromParams);
 
@@ -118,81 +121,89 @@ const updateUser = async (req, res) => {
             });
         }
 
-        // const { fname, lname, email, phone, password, address } = dataToUpdate;
+        if (!validator.isValidDetails(dataToUpdate)) {
+            return res.status(400).send({ status: false, msg: "please provide details to update." });
+        }
 
-        if(dataToUpdate.fname){
-            if (!validator.isValidValue(dataToUpdate.fname)) {
+        const { fname, lname, email, phone, password, address } = dataToUpdate;
+
+        if(fname){
+            if (!validator.isValidValue(fname)) {
                 return res.status(400).send({ status: false, msg: "Please provide first name of the user." });
             }
         }
 
-        if(dataToUpdate.lname){
-            if (!validator.isValidValue(dataToUpdate.lname)) {
+        if(lname){
+            if (!validator.isValidValue(lname)) {
                 return res.status(400).send({ status: false, msg: "Please provide last name of the user." });
             }
         }
 
-        if(dataToUpdate.email){
-            if (!validator.isValidValue(dataToUpdate.email)) {
+        if(email){
+            if (!validator.isValidValue(email)) {
                 return res.status(400).send({ status: false, msg: "Please provide email of the user." });
             }
     
-            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(dataToUpdate.email)) {
+            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
                 return res.status(400).send({ status: false, message: "Please provide valid Email Address" });
             }
     
-            const isDuplicateemail = await userModel.findOne({ email: dataToUpdate.email });
+            const isDuplicateemail = await userModel.findOne({ email: email });
             if (isDuplicateemail) {
                 return res.status(400).send({status: false,msg: "User with provided email is already present.",})
             }
         }
 
-        if(dataToUpdate.phone){
-            if (!validator.isValidValue(dataToUpdate.phone)) {
+        if(phone){
+            if (!validator.isValidValue(phone)) {
                 return res.status(400).send({ status: false, msg: "Please provide phone number of the user." });
             }
     
-            let isValidPhone = (/^(\+91[\-\s]?)?[0]?(91)?[6789]\d{9}$/.test(dataToUpdate.phone))
+            let isValidPhone = (/^(\+91[\-\s]?)?[0]?(91)?[6789]\d{9}$/.test(phone))
             if (!isValidPhone) {
                 return res.status(400).send({ status: false, message: "please provide valid phone number" })
             }
     
-            const isDuplicatePhone = await userModel.findOne({ phone: dataToUpdate.phone });
+            const isDuplicatePhone = await userModel.findOne({ phone: phone });
             if (isDuplicatePhone) {
                 return res.status(400).send({status: false,msg: "User with provided phone no. is already present.",})
             }
         }
 
-        if(dataToUpdate.password){
-            if (!validator.isValidValue(dataToUpdate.password)) {
+        let holdPassword = password
+        if(holdPassword){
+            if (!validator.isValidValue(holdPassword)) {
                 return res.status(400).send({ status: false, msg: "Please provide password." });
             }
     
-            if (dataToUpdate.password.length < 8 || dataToUpdate.password.length > 15) {
+            if (holdPassword.length < 8 || holdPassword.length > 15) {
                 return res.status(400).send({ status: false, message: "Password must be of 8-15 letters." })
             }
+
+            const salt = await bcrypt.genSalt(10);
+            var hashedPassword = await bcrypt.hash(holdPassword, salt)
         }
 
-        if (dataToUpdate.address) {
+        if (address) {
             
-            let stringifyShippingAddress = JSON.stringify(dataToUpdate.address)
+            let stringifyShippingAddress = JSON.stringify(address)
             let parseShippingAddress = JSON.parse(stringifyShippingAddress)
 
             if (validator.isValidDetails(parseShippingAddress)) {
                 if (parseShippingAddress.hasOwnProperty('shipping')) {
                     if (parseShippingAddress.shipping.hasOwnProperty('street')) {
                         if (!validator.isValidValue(parseShippingAddress.shipping.street)) {
-                            return res.status(400).send({ status: false, message: "Please provide shipping address's Street" });
+                            return res.status(400).send({ status: false, message: "Please provide street of the shipping address." });
                         }
                     }
                     if (parseShippingAddress.shipping.hasOwnProperty('city')) {
                         if (!validator.isValidValue(parseShippingAddress.shipping.city)) {
-                            return res.status(400).send({ status: false, message: "Please provide shipping address's City" });
+                            return res.status(400).send({ status: false, message: "Please provide city of the shipping address." });
                         }
                     }
                     if (parseShippingAddress.shipping.hasOwnProperty('pincode')) {
                         if (!validator.isValidValue(parseShippingAddress.shipping.pincode)) {
-                            return res.status(400).send({ status: false, message: "Please provide shipping address's pincode" });
+                            return res.status(400).send({ status: false, message: "Please provide pincode of the shipping address." });
                         }
                     }
                 }
@@ -205,21 +216,21 @@ const updateUser = async (req, res) => {
             }
         }
 
-        if (dataToUpdate.address) {
+        if (address) {
 
-            let stringifyBillingAddress = JSON.stringify(dataToUpdate.address)
+            let stringifyBillingAddress = JSON.stringify(address)
             let parseBillingAddress = JSON.parse(stringifyBillingAddress)
 
             if (validator.isValidDetails(parseBillingAddress)) {
                 if (parseBillingAddress.hasOwnProperty('billing')) {
                     if (parseBillingAddress.billing.hasOwnProperty('street')) {
                         if (!validator.isValidValue(parseBillingAddress.billing.street)) {
-                            return res.status(400).send({ status: false, message: "Please provide billing address's Street" });
+                            return res.status(400).send({ status: false, message: "Please provide street of the billing address." });
                         }
                     }
                     if (parseBillingAddress.billing.hasOwnProperty('city')) {
                         if (!validator.isValidValue(parseBillingAddress.billing.city)) {
-                            return res.status(400).send({ status: false, message: "Please provide billing address's City" });
+                            return res.status(400).send({ status: false, message: "Please provide city of the billing address." });
                         }
                     }
                     if (parseBillingAddress.billing.hasOwnProperty('pincode')) {
@@ -236,29 +247,12 @@ const updateUser = async (req, res) => {
                 return res.status(400).send({ status: false, message: "Billing address cannot be empty" });
             }
         }
-
-        if (!validator.isValidDetails(dataToUpdate)) {
-            res.status(400).send({
-                status: false,
-                msg: "Please provide the user details to update",
-            });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        hashedPassword = await bcrypt.hash(dataToUpdate.password, salt)
-
-        if (!(files && files.length > 0)) {
-            return res.status(400).send({ status: false, message: "Please provide your image" })
-        }
+      
         profileImageLink = await aws.uploadFile(files[0])
-
-        
-
-        
-        
-
-        let updatedDetails = await userModel.findOneAndUpdate({ _id: userId }, {
-            $set: {
+    
+        let updatedDetails = await userModel.findOneAndUpdate(
+            { _id: userIdFromParams }, 
+            {$set: {
                 fname: fname,
                 lname: lname,
                 email: email,

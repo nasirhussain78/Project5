@@ -9,6 +9,7 @@ const createProduct = async (req, res) => {
     try{
         let { title,description,price,currencyId,currencyFormat,
             availableSizes,isFreeShipping,installments,style } = req.body
+
         let files = req.files
 
         currencyFormat = currencySymbol('INR')
@@ -33,29 +34,67 @@ const createProduct = async (req, res) => {
 
 const filterProducts = async (req, res) => {
     try{
-        const querryData = req.query
+        const queryData = req.query
         let filter = { isDeleted:false }
 
-        const { size, productName, priceGreaterThan, priceLessThan, sortPrice } = querryData;
+        const { size, productName, priceGreaterThan, priceLessThan, sortPrice } = queryData;
 
         if(validator.isValidValue(size)){
-            querryData['availableSizes'] = size
+            filter['availableSizes'] = size
         }
 
         if(validator.isValidValue(productName)){
-            querryData['title'] = {}
-            querryData['title']['$regex'] = productName
-            querryData['title']['$options'] = 'i'
+            filter['title'] = {}
+            filter['title']['$regex'] = productName
+            filter['title']['$options'] = 'i'
         }
 
         if(validator.isValidValue(priceGreaterThan)){
             if (!(!isNaN(Number(priceGreaterThan)))) {
-                return res.status(400).send({status:false, message: 'priceGreaterThan should be a valid number' })
+                return res.status(400).send({status:false, message: 'price should be a valid number' })
             }
-            if (priceGreaterThan <= 0) {
-                return res.status(400).send({status:false, message: 'priceGreaterThan can not be zero or less than zero' })
+            if (priceGreaterThan < 0) {
+                return res.status(400).send({status:false, message: 'price can not be less than zero' })
             }
+            if (!filter.hasOwnProperty('price'))
+                filter['price'] = {}
+                filter['price']['$gte'] = Number(priceGreaterThan)
         }
+
+        if(validator.isValidValue(priceLessThan)){
+            if (!(!isNaN(Number(priceLessThan)))) {
+                return res.status(400).send({status:false, message: 'price should be a valid number' })
+            }
+            if (priceLessThan <= 0) {
+                return res.status(400).send({status:false, message: 'price can not be zero or less than zero' })
+            }
+            if (!filter.hasOwnProperty('price'))
+                filter['price'] = {}
+                filter['price']['$lte'] = Number(priceLessThan)
+        }
+
+        if (validator.isValidValue(sortPrice)) {
+
+            if (!((priceSort == 1) || (priceSort == -1))) {
+                return res.status(400).send({ status: false, message: 'priceSort should be 1 or -1 '})
+            }
+
+            const products = await productModel.find(filter).sort({ price: priceSort })
+
+            if (products.length === 0) {
+                return res.status(404).send({ productStatus: false, message: 'No Product found' })
+            }
+
+            return res.status(200).send({ status: true, message: 'Product list', data: products })
+        }
+
+        const products = await productModel.find(filter)
+
+        if (products.length === 0) {
+            return res.status(404).send({ productStatus: false, message: 'No Product found' })
+        }
+
+        return res.status(200).send({ status: true, message: 'Product list', data: products })
     }
     catch(error){
         return res.status(500).json({ status: false, message: error.message });
@@ -74,12 +113,12 @@ const getProductById = async (req, res) => {
 
         const findProduct = await productModel.findById(productId)
 
-        if(findProduct.isDeleted == true){
-            return res.status(400).send({ status:false, msg: "product is deleted" });
-        }
-
         if (!findProduct) {
             return res.status(404).send({ status: false, message: 'product does not exists' })
+        }
+
+        if(findProduct.isDeleted == true){
+            return res.status(400).send({ status:false, msg: "product is deleted" });
         }
 
         return res.status(200).send({ status: true, message: 'Product found successfully', data: findProduct })
@@ -89,7 +128,7 @@ const getProductById = async (req, res) => {
     }
 }
 
-//----------------------- update product------------------------------------------------------------------------
+//----------------------- update product-------------------------------------------------------------------------------------------------------
 
 const updateProduct = async function (req,res){
     try {
@@ -101,6 +140,10 @@ const updateProduct = async function (req,res){
        
         const findProduct = await productModel.findById(productId)
 
+        if (!findProduct) {
+            return res.status(404).send({ status: false, message: 'product does not exists' })
+        }
+
         if(findProduct.isDeleted == true){
             return res.status(400).send({ status:false, msg: "product is deleted" });
         }
@@ -109,15 +152,105 @@ const updateProduct = async function (req,res){
             return res.status(400).send({ status: false, msg: "please provide details to update." });
         }
 
-        // const { title } = req.body
+        let { title, description, price, currencyId, 
+            isFreeShipping, productImage, style, availableSizes, installments } = req.body
 
-        if(req.body.title){
-            if (!validator.isValidValue(req.body.title)) {
-                return res.status(400).send({ status: false, msg: "Please provide title of the product." });
+        const dataToUpdate = {}
+
+        if(title){
+            if (!validator.isValidValue(title)) {
+                return res.status(400).send({ status: false, messege: "title can not be an empty string." })
             }
+            const isDuplicateTitle = await productModel.findOne({title});
+            if (isDuplicateTitle) {
+                return res.status(400).send({status: false,msg: "title already exists.",})
+            }
+
+            dataToUpdate['title'] = title
         }
         
-        const updatedProduct = await productModel.findOneAndUpdate( { _id: productId }, {title : req.body.title}, { new: true, upsert: true } );
+        if(description){
+            if (!validator.isValidValue(description)) {
+                return res.status(400).send({ status: false, msg: "description can not be an empty string." });
+            }
+            
+            dataToUpdate['description'] = description
+        }
+
+        if(price){
+            if (!validator.isValidValue(price)) {
+                return res.status(400).send({ status: false, messege: "price can not be empty." })
+            }
+
+            if (!(!isNaN(Number(price)))) {
+                return res.status(400).send({ status: false, message: 'Price should be a valid number' })
+            }
+
+            if (price <= 0) {
+                return res.status(400).send({ status: false, message: 'Price can not be zero or less than zero.' })
+            }
+
+            dataToUpdate['price'] = price
+        }
+
+        if(currencyId){
+            if (!validator.isValidValue(currencyId)) {
+                return res.status(400).send({ status: false, messege: "curencyId can not be empty." })
+            }
+
+            if (!(currencyId == "INR")) {
+                return res.status(400).send({ status: false, message: 'currencyId should be a INR' })
+            }
+
+            dataToUpdate['currencyId'] = currencyId
+        }
+
+        if(isFreeShipping){
+            if (!validator.isValidValue(isFreeShipping)) {
+                return res.status(400).send({ status: false, messege: "isFreeShipping can not be empty." })
+            }
+
+            if (!((isFreeShipping === true) || (isFreeShipping === false))) {
+                return res.status(400).send({ status: false, message: 'isFreeShipping should be a boolean value' })
+            }
+    
+            dataToUpdate['isFreeShipping'] = isFreeShipping
+        }
+
+        productImage = req.files;
+        if(productImage){
+            if ((productImage && productImage.length > 0)) {
+            let imageLink = await aws.uploadFile(productImage[0]);
+            dataToUpdate['productImage'] = imageLink
+            console.log(dataToUpdate)
+        }
+        }
+
+        if(style){
+            dataToUpdate['style'] = style
+        }
+        
+        if(availableSizes){
+            if (!validator.isValidSize(availableSizes)) {
+                return res.status(400).send({ status: false, message: "Please provide valid size." }); //Enum is mandory
+              }
+            
+              dataToUpdate['availableSizes'] = availableSizes
+        }
+
+        if(installments){
+            if (!validator.isValidValue(installments)) {
+                return res.status(400).send({ status: false, messege: "installments can not be empty." })
+            }
+
+            if (!(!isNaN(Number(installments)))) {
+                return res.status(400).send({ status: false, message: 'installments should be a valid number' })
+            }
+
+            dataToUpdate['installments'] = installments
+        }
+
+        const updatedProduct = await productModel.findOneAndUpdate( { _id: productId }, dataToUpdate , { new: true, upsert: true } );
 
         res.status(200).send({
             status: true,
