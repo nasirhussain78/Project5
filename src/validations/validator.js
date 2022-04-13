@@ -1,5 +1,6 @@
 const userModel = require('../models/userModel')
 const productModel = require('../models/productModel')
+const mongoose = require('mongoose')
 
 const isValidValue = function (value) {
     if (typeof value === "undefined" || value === null) return false; 
@@ -7,13 +8,13 @@ const isValidValue = function (value) {
     return true;
 };
 
-const isValidDetails = function (requestBody) {
-    return Object.keys(requestBody).length > 0;
-};
-
 const isValidString = function (value) {
     if (typeof value === "string" && value.trim().length === 0) return false;
     return true;
+};
+
+const isValidDetails = function (requestBody) {
+    return Object.keys(requestBody).length > 0;
 };
 
 const isValidSize = function (input) {
@@ -24,6 +25,11 @@ const validInstallment = function isInteger(value) {
     if (value < 0) return false
     if (value % 1 == 0) return true;
 }
+
+const isValidObjectId = function (objectId) {
+    return mongoose.Types.ObjectId.isValid(objectId)
+}
+
 
 //------------------------------------ user validations --------------------------------------------------------
 
@@ -154,7 +160,22 @@ const login = async (req, res, next) => {
 
 const updateUser = async (req, res, next) => {
     try{
+        const userIdFromParams = req.params.userId
+        const userIdFromToken = req.userId
         const dataToUpdate = req.body
+
+        const userByuserId = await userModel.findById(userIdFromParams);
+
+        if (!userByuserId) {
+            return res.status(404).send({ status: false, message: 'user not found.' });
+        }
+
+        if (userIdFromToken != userIdFromParams) {
+            return res.status(403).send({
+              status: false,
+              message: "Unauthorized access.",
+            });
+        }
 
         if (!isValidDetails(dataToUpdate)) {
             res.status(400).send({
@@ -163,116 +184,112 @@ const updateUser = async (req, res, next) => {
             });
         }
 
-        const { fname, lname, email, profileImage, phone, password, address } = dataToUpdate;
+        // const { fname, lname, email, phone, password, address } = dataToUpdate;
 
-        if (!isValidString(fname)) {
-            return res.status(400).send({ status: false, msg: "Please provide first name of the user." }); //Category is mandory
+        if(dataToUpdate.fname){
+            if (!isValidValue(dataToUpdate.fname)) {
+                return res.status(400).send({ status: false, msg: "Please provide first name of the user." });
+            }
         }
 
-        if (!isValidString(lname)) {
-            return res.status(400).send({ status: false, msg: "Please provide last name of the user." }); //Category is mandory
+        if(dataToUpdate.lname){
+            if (!isValidValue(dataToUpdate.lname)) {
+                return res.status(400).send({ status: false, msg: "Please provide last name of the user." });
+            }
         }
 
-        if (!isValidString(email)) {
-            return res.status(400).send({ status: false, msg: "Please provide email of the user." }); //Category is mandory
+        if(dataToUpdate.email){
+            if (!isValidValue(dataToUpdate.email)) {
+                return res.status(400).send({ status: false, msg: "Please provide email of the user." });
+            }
+    
+            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(dataToUpdate.email)) {
+                return res.status(400).send({ status: false, message: "Please provide valid Email Address" });
+            }
+    
+            const isDuplicateemail = await userModel.findOne({ email: dataToUpdate.email });
+            if (isDuplicateemail) {
+                return res.status(400).send({status: false,msg: "User with provided email is already present.",})
+            }
         }
 
-        if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-            return res.status(400).send({ status: false, message: "Please provide valid Email Address" });
+        if(dataToUpdate.phone){
+            if (!isValidValue(dataToUpdate.phone)) {
+                return res.status(400).send({ status: false, msg: "Please provide phone number of the user." });
+            }
+    
+            let isValidPhone = (/^(\+91[\-\s]?)?[0]?(91)?[6789]\d{9}$/.test(dataToUpdate.phone))
+            if (!isValidPhone) {
+                return res.status(400).send({ status: false, message: "please provide valid phone number" })
+            }
+    
+            const isDuplicatePhone = await userModel.findOne({ phone: dataToUpdate.phone });
+            if (isDuplicatePhone) {
+                return res.status(400).send({status: false,msg: "User with provided phone no. is already present.",})
+            }
         }
 
-        const isDuplicateemail = await userModel.findOne({ email: email });
-        if (isDuplicateemail) {
-            return res.status(400).send({status: false,msg: "User with provided email is already present.",})
+        if(dataToUpdate.password){
+            if (!isValidValue(dataToUpdate.password)) {
+                return res.status(400).send({ status: false, msg: "Please provide password." });
+            }
+    
+            if (dataToUpdate.password.length < 8 || dataToUpdate.password.length > 15) {
+                return res.status(400).send({ status: false, message: "Password must be of 8-15 letters." })
+            }
         }
 
-        if (!isValidString(profileImage)) {
-            return res.status(400).send({ status: false, msg: "Please provide profile image of the user." }); //Category is mandory
-        }
+        if (dataToUpdate.address) {
+            
+            let stringifyShippingAddress = JSON.stringify(dataToUpdate.address)
+            let parseShippingAddress = JSON.parse(stringifyShippingAddress)
 
-        if (!isValidString(phone)) {
-            return res.status(400).send({ status: false, msg: "Please provide phone number of the user." }); //Category is mandory
-        }
-
-        let isValidPhone = (/^(\+91[\-\s]?)?[0]?(91)?[6789]\d{9}$/.test(phone))
-        if (!isValidPhone) {
-            return res.status(400).send({ status: false, message: "please provide valid phone number" })
-        }
-
-        const isDuplicatePhone = await userModel.findOne({ phone: phone });
-        if (isDuplicatePhone) {
-            return res.status(400).send({status: false,msg: "User with provided phone no. is already present.",})
-        }
-
-        if (!isValidString(password)) {
-            return res.status(400).send({ status: false, msg: "Please provide password." }); //Category is mandory
-        }
-
-        if (password.length < 8 || password.length > 15) {
-            return res.status(400).send({ status: false, message: "Password must be of 8-15 letters." })
-        }
-
-        if (address) {
-            //converting shipping address to string them parsing it.
-            let shippingAddressToString = JSON.stringify(address)
-            let parsedShippingAddress = JSON.parse(shippingAddressToString)
-
-            if (isValidRequestBody(parsedShippingAddress)) {
-                if (parsedShippingAddress.hasOwnProperty('shipping')) {
-                    if (parsedShippingAddress.shipping.hasOwnProperty('street')) {
-                        if (!isValidValue(parsedShippingAddress.shipping.street)) {
+            if (isValidDetails(parseShippingAddress)) {
+                if (parseShippingAddress.hasOwnProperty('shipping')) {
+                    if (parseShippingAddress.shipping.hasOwnProperty('street')) {
+                        if (!isValidValue(parseShippingAddress.shipping.street)) {
                             return res.status(400).send({ status: false, message: "Please provide shipping address's Street" });
                         }
                     }
-                    if (parsedShippingAddress.shipping.hasOwnProperty('city')) {
-                        if (!isValidValue(parsedShippingAddress.shipping.city)) {
+                    if (parseShippingAddress.shipping.hasOwnProperty('city')) {
+                        if (!isValidValue(parseShippingAddress.shipping.city)) {
                             return res.status(400).send({ status: false, message: "Please provide shipping address's City" });
                         }
                     }
-                    if (parsedShippingAddress.shipping.hasOwnProperty('pincode')) {
-                        if (!isValidValue(parsedShippingAddress.shipping.pincode)) {
+                    if (parseShippingAddress.shipping.hasOwnProperty('pincode')) {
+                        if (!isValidValue(parseShippingAddress.shipping.pincode)) {
                             return res.status(400).send({ status: false, message: "Please provide shipping address's pincode" });
                         }
                     }
-
-                    //using var to use these variables outside this If block.
-                    var shippingStreet = address.shipping.street
-                    var shippingCity = address.shipping.city
-                    var shippingPincode = address.shipping.pincode
                 }
             } else {
                 return res.status(400).send({ status: false, message: "Shipping address cannot be empty" });
             }
         }
 
-        if (address) {
+        if (dataToUpdate.address) {
 
-            //converting billing address to string them parsing it.
-            let billingAddressToString = JSON.stringify(address)
-            let parsedBillingAddress = JSON.parse(billingAddressToString)
+            let stringifyBillingAddress = JSON.stringify(dataToUpdate.address)
+            let parseBillingAddress = JSON.parse(stringifyBillingAddress)
 
-            if (isValidRequestBody(parsedBillingAddress)) {
-                if (parsedBillingAddress.hasOwnProperty('billing')) {
-                    if (parsedBillingAddress.billing.hasOwnProperty('street')) {
-                        if (!isValidValue(parsedBillingAddress.billing.street)) {
+            if (isValidDetails(parseBillingAddress)) {
+                if (parseBillingAddress.hasOwnProperty('billing')) {
+                    if (parseBillingAddress.billing.hasOwnProperty('street')) {
+                        if (!isValidValue(parseBillingAddress.billing.street)) {
                             return res.status(400).send({ status: false, message: "Please provide billing address's Street" });
                         }
                     }
-                    if (parsedBillingAddress.billing.hasOwnProperty('city')) {
-                        if (!isValidValue(parsedBillingAddress.billing.city)) {
+                    if (parseBillingAddress.billing.hasOwnProperty('city')) {
+                        if (!isValidValue(parseBillingAddress.billing.city)) {
                             return res.status(400).send({ status: false, message: "Please provide billing address's City" });
                         }
                     }
-                    if (parsedBillingAddress.billing.hasOwnProperty('pincode')) {
-                        if (!isValidValue(parsedBillingAddress.billing.pincode)) {
+                    if (parseBillingAddress.billing.hasOwnProperty('pincode')) {
+                        if (!isValidValue(parseBillingAddress.billing.pincode)) {
                             return res.status(400).send({ status: false, message: "Please provide billing address's pincode" });
                         }
                     }
 
-                    //using var to use these variables outside this If block.
-                    var billingStreet = address.billing.street
-                    var billingCity = address.billing.city
-                    var billingPincode = address.billing.pincode
                 }
             } else {
                 return res.status(400).send({ status: false, message: "Billing address cannot be empty" });
@@ -337,4 +354,4 @@ const product = async (req, res, next) => {
     }
 }
 
-module.exports = { user, login, product, updateUser }
+module.exports = { user, login, product, updateUser, isValidValue, isValidDetails, isValidString, isValidSize, isValidObjectId }

@@ -13,5 +13,8 @@ router.get('/user/:userId/profile', auth.userAuth, userController.getUserDetail)
 router.put('/user/:userId/profile', auth.userAuth, userController.updateUser)
 
 router.post('/products',validate.product, productController.createProduct)
+router.get('/products/:productId', productController.getProductById)
+router.put('/products/:productId', productController.updateProduct)
+router.delete('/products/:productId', productController.deleteProduct)
 
 module.exports = router;
