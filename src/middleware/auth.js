@@ -9,20 +9,20 @@ const userAuth = async (req, res, next) => {
         .status(403)
         .send({
           status: false,
-          message: `Missing authentication token in request`,
+          message: 'Missing required token in request',
         });
     }
 
-    let splitToken = token.split(' ')
+    let validToken = token.split(' ')
 
-    const decodeToken = jwt.verify(splitToken[1], "group9")
+    const decodeToken = jwt.verify(validToken[1], "group9")
     
     if (!decodeToken) {
       return res
         .status(403)
         .send({
           status: false,
-          message: `Invalid authentication token in request`,
+          message: 'Invalid token',
         });
     }
 
