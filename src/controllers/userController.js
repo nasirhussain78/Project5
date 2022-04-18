@@ -284,8 +284,13 @@ const updateUser = async (req, res) => {
         }
 
         if(address){
-            if(address.shipping){
-                if((address.shipping.street)){
+            const stringifyAddress = JSON.stringify(address)
+            const parsingAddress = JSON.parse(stringifyAddress)
+            // console.log("coming in ", 1)
+            if(parsingAddress.shipping){
+                // console.log("coming in ", 2)
+                if((parsingAddress.shipping.street)){
+                    // console.log("coming in ", 3)
                     if(!validator.isValidValue(address.shipping.street)){
                         return res.status(400).send({ status: false, messege: "please provide street for shipping." })
                     }
