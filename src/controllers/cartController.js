@@ -166,7 +166,7 @@ const updateCart = async (req, res) => {
 
         if (!validator.isValidObjectId(cartId)) {
             return res.status(400).send({ status: false, msg: "cartId is invalid" });
-        }
+        } 
 
         const findCart = await cartModel.findById(cartId);
     
