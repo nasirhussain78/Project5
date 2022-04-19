@@ -89,7 +89,7 @@ const createCart = async (req, res) => {
                         totalPrice : newTotalPrice,
                         quantity : items[i].quantity
                     }
-                    flag = 1;
+                    flag = 1
                     const saveData = await cartModel.findOneAndUpdate(
                         {userId : userIdFromParams},
                         newCartData, {new:true})
