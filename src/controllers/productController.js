@@ -256,8 +256,8 @@ const updateProduct = async function (req,res){
             if(!validator.isValidValue(availableSizes)){
                 return res.status(400).send({status:false, message:"A valid Size should present"})
             }
-            if (!validator.isValidSize(availableSizes)) {
-                return res.status(400).send({ status: false, message: "Please provide valid size." }); //Enum is mandory
+            if (!validator.isValidSizes(availableSizes)) {
+                return res.status(400).send({ status: false, message: "Please provide valid size." }); 
               }
             
               dataToUpdate['availableSizes'] = availableSizes
