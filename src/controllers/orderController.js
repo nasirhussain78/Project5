@@ -82,8 +82,10 @@ const createOrder = async (req, res) => {
             }
         }
 
-        if(!validator.isValidStatus(status)){
-            return res.status(400).send({status:false, message:"valid status is required. [completed, pending, cancelled]"})
+        if(status){
+            if(!validator.isValidStatus(status)){
+                return res.status(400).send({status:false, message:"valid status is required. [completed, pending, cancelled]"})
+            }
         }
 
         const isOrderPlaceEarlier = await orderModel.findOne({userId : userIdFromParams});
