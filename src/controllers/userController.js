@@ -282,6 +282,51 @@ const updateUser = async (req, res) => {
             var hashedPassword = await bcrypt.hash(holdPassword, salt)
         }
 
+        if(address){
+            if(address.shipping.street) {
+                if (!validator.isValidValue(address.shipping.street)){
+                    return res.status(400).send({status:false, message: "Please provide the Street in Shipping Address"})   //Shipping.street is mandory 
+                }
+            }
+            if(address.shipping.city) {
+                if (!validator.isValidValue(address.shipping.city)){
+                    return res.status(400).send({status:false, message: "Please provide the City in Shipping Address"})   //Shipping.city is mandory 
+                }
+                if (!validator.validateChar(address.shipping.city)) {
+                    return res.status(400).send({ status: false, message: "Please provide the valid Shipping City" })   //Shipping.city is only in char
+                }
+            }
+            if(address.shipping.pincode) {
+                if (!validator.isValidValue(address.shipping.pincode)){
+                    return res.status(400).send({status:false, message: "Please provide the pincode in Shipping Address"})   //Shipping.pincode is mandory 
+                }
+                if (!validator.isValidPincode(address.shipping.pincode)){
+                    return res.status(400).send({status:false, message: "Please provide the valid pincode in Shipping Address"})   //Shipping.pincode is in correct format 
+                }
+            }
+            if(address.billing.street) {
+                if (!validator.isValidValue(address.billing.street)){
+                    return res.status(400).send({status:false, message: "Please provide the Street in Billing Address"})   //billing.street is mandory 
+                }
+            }
+            if(address.billing.city) {
+                if (!validator.isValidValue(address.billing.city)){
+                    return res.status(400).send({status:false, message: "Please provide the City in Billing Address"})   //billing.city is mandory 
+                }
+                if (!validator.validateChar(address.billing.city)) {
+                    return res.status(400).send({ status: false, message: "Please provide the valid Billing City" })     //billing.city is only in char
+                }
+            }
+            if(address.billing.pincode) {
+                if (!validator.isValidValue(address.billing.pincode)){
+                    return res.status(400).send({status:false, message: "Please provide the pincode in Billing Address"})   //billing.pincode is mandory 
+                }
+                if (!validator.isValidPincode(address.billing.pincode)){
+                    return res.status(400).send({status:false, message: "Please provide the valid pincode in Billing Address"})   //billing.pincode is in correct format
+                }
+            }
+        }
+
         let files = req.files
         if(files && files.length > 0){
         var profileImageLink = await aws.uploadFile(files[0])
@@ -295,7 +340,19 @@ const updateUser = async (req, res) => {
                 email: email,
                 profileImage: profileImageLink,
                 phone: phone,
-                password: hashedPassword
+                password: hashedPassword,
+                address: {
+                    shipping: {
+                        street: address.shipping.street,
+                        city: address.shipping.city,
+                        pincode: address.shipping.pincode
+                    },
+                    billing: {
+                        street: address.billing.street,
+                        city: address.billing.city,
+                        pincode: address.billing.pincode
+                    }
+                }
             }
         }, { new: true })
 
