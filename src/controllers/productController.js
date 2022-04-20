@@ -44,9 +44,17 @@ const createProduct = async (req, res) => {
                 }
             }
 
-            if (!validator.isValidValue(availableSizes)) {
-                return res.status(400).send({ status: false, messege: "please provide availableSizes" })
+            let sizeEnum = availableSizes.split(",").map(x => x.trim())
+            if(req.body.hasOwnProperty('availableSizes')){
+            if(!validator.isValidValue(availableSizes)){
+                return res.status(400).send({status:false, message:"A valid Size should present"})
             }
+            for (let i = 0; i < sizeEnum.length; i++) {
+                if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(sizeEnum[i]))) {
+                    return res.status(400).send({status: false, message: 'Available Sizes must be ${["S", "XS", "M", "X", "L", "XXL", "XL"]}' })
+                }
+            }
+        }
 
         currencyFormat = currencySymbol('INR') 
         
