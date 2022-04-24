@@ -9,8 +9,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(multer().any())
 app.use('/', route);
-
-mongoose.connect("mongodb://127.0.0.1:27017/group9Database", {useNewUrlParser: true})
+mongoose.connect("mongodb+srv://nasirhussain7878:llo5gS70CAxajLIs@cluster0.neahs.mongodb.net/group9Project5", {useNewUrlParser: true})
 .then(() => console.log('Successfully connected to mongoDB 27017'))
 .catch(err => console.log('Connection error'))
 
